@@ -50,15 +50,21 @@ No início do código, defina os seguintes valores:
 
 ```javascript
 
-const  FROM  =  'example@mail.com'; // E-mail do remetente
+const FROM  =  'example@mail.com'; // E-mail do remetente
 
-const  SUBJECT  =  'assunto do email'; // Assunto do e-mail
+const SUBJECT  =  'assunto do email'; // Assunto do e-mail
 
-const  HAS_ATTACHMENT  =  true; // Se o e-mail tem anexo
+const HAS_ATTACHMENT  =  true; // Se o e-mail tem anexo (meio que é obrigatório)
 
-const  FILENAME  =  'csv'; // Extensão dos arquivos desejados
+const FILENAME  =  'csv'; // Extensão dos arquivos desejados
 
-const  DRIVE_FOLDER_ID  =  "SEU_ID_AQUI"; // 🔹 Substitua pelo ID da pasta no Google Drive
+const AUTO_ARCHIVE = true; // Auto Arquiva os emails executados.
+
+const LABEL_NAME = "Saved"; // Define um label para os emails processados. e ignora os já processados.
+
+const DRIVE_FOLDER_ID  =  "SEU_ID_AQUI"; // Substitua pelo ID da pasta no Google Drive
+
+const DRIVE_FOLDER_UPDATED_ID = "OPCIONAL"; // CAso exista algum processo após (por outro script) verifica em uma segunda pasta se o arquivos já existe. 
 ```
   
   

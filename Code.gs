@@ -1,9 +1,15 @@
-const  FROM  =  'example@mail.com'; // E-mail do remetente
-const  SUBJECT  =  'assunto do email'; // Assunto do e-mail
-const  HAS_ATTACHMENT  =  true; // Se o e-mail tem anexo (meio que é obrigatório)
-const  FILENAME  =  'csv'; // Extensão dos arquivos desejados
-const  DRIVE_FOLDER_ID  =  "SEU_ID_AQUI"; // Substitua pelo ID da pasta no Google Drive
+const FROM  =  'example@mail.com'; // E-mail do remetente
+const SUBJECT  =  'assunto do email'; // Assunto do e-mail
+const HAS_ATTACHMENT  =  true; // Se o e-mail tem anexo (meio que é obrigatório)
+const FILENAME  =  'csv'; // Extensão dos arquivos desejados
+const AUTO_ARCHIVE = true; // Auto Arquiva os emails executados.
+const LABEL_NAME = "Saved"; // Define um label para os emails processados. e ignora os já processados.
+const DRIVE_FOLDER_ID  =  "SEU_ID_AQUI"; // Substitua pelo ID da pasta no Google Drive
+const DRIVE_FOLDER_UPDATED_ID = "OPCIONAL"; // CAso exista algum processo após (por outro script) verifica em uma segunda pasta se o arquivos já existe. 
 
+/**
+ * Prepara com base nos parâmetros a query que será usada para filtrar os emails 
+ */
 function prepareQueryForMail() {
   var query = ""; // Inicializa corretamente
 
@@ -19,6 +25,9 @@ function prepareQueryForMail() {
       query += ' filename:' + FILENAME;
     }  
   }
+  if (LABEL_NAME.trim() !== "") {
+    query+=' !label:' + LABEL_NAME;
+  }
 
   if (!query.trim()) {
     console.error('Nenhum parâmetro definido para a busca.');
@@ -28,6 +37,9 @@ function prepareQueryForMail() {
   return query.trim();
 }
 
+/**
+ * Função para testar os emails que serão processados. 
+ */
 function getEmails() {    
   var query = prepareQueryForMail();
   if (!query) return;
@@ -70,16 +82,44 @@ function saveAttachmentsToDrive() {
   try {
     folder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
   } catch (e) {
-    console.error("Erro: A pasta com o ID fornecido não foi encontrada. Verifique o ID e as permissões.");
+    console.error("Erro: A pasta com o ID", DRIVE_FOLDER_ID, "fornecido não foi encontrada. Verifique o ID e as permissões.");
     return;
+  }
+
+  let subFolder;
+  if (DRIVE_FOLDER_UPDATED_ID.trim() !== "") {
+    try {
+      subFolder = DriveApp.getFolderById(DRIVE_FOLDER_UPDATED_ID);
+    } catch (e) {
+      console.error("Erro: A pasta com o ID", DRIVE_FOLDER_UPDATED_ID, " fornecido não foi encontrada. Verifique o ID e as permissões.");
+      return;
+    }
   }
 
   // Criar um mapa com os nomes dos arquivos já existentes na pasta
   const existingFiles = {};
   const files = folder.getFiles();
+
   while (files.hasNext()) {
     let file = files.next();
     existingFiles[file.getName()] = true; // Armazena os nomes dos arquivos
+  }
+
+  if (DRIVE_FOLDER_UPDATED_ID.trim() !== "") {
+    const subFiles = subFolder.getFiles();
+    while (subFiles.hasNext()) {
+      let file = subFiles.next();
+      existingFiles[file.getName()] = true; // Armazena os nomes dos arquivos
+    }
+  }
+
+  // 🔹 Se LABEL_NAME for definido, buscar ou criar o label
+  if (LABEL_NAME.trim() !== "") {
+    label = GmailApp.getUserLabelByName(LABEL_NAME);
+    if (!label) {
+      label = GmailApp.createLabel(LABEL_NAME);
+      console.log(`Label "${LABEL_NAME}" criado.`);
+    }
   }
 
   let totalFilesSaved = 0;
@@ -102,6 +142,17 @@ function saveAttachmentsToDrive() {
         }
       });
     });
+    // 🔹 Se um label foi definido, aplicá-lo ao e-mail
+    if (label) {
+      thread.addLabel(label);
+      console.log(`Label "${LABEL_NAME}" adicionado ao e-mail: ${thread.getFirstMessageSubject()}`);
+    }
+
+    // Arquivar e-mail após salvar os anexos
+    if (AUTO_ARCHIVE) {
+      console.log("E-mail arquivado:", thread.getFirstMessageSubject());
+      thread.moveToArchive();
+    }
   });
 
   console.log(`Processo concluído! Total de arquivos salvos: ${totalFilesSaved}`);
